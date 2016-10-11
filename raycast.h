@@ -16,17 +16,29 @@ typedef struct RGBpixel {
 
 // Structure to hold an object's data in the scene
 typedef struct {
-  int kind; // 0 = plane, 1 = sphere
+  int kind; // 0 = plane, 1 = sphere, 2 = light, 3 = camera
   double color[3];
+  double position[3];
+  double diffuseColor[3];
+  double specularColor[3];
   union {
     struct {
-      double position[3];
       double normal[3];
     } plane;
     struct {
-      double position[3];
       double radius;
     } sphere;
+    struct {
+      double direction[3];
+      double radialA2;
+      double radialA1;
+      double radialA0;
+      double angularA0;
+    } light;
+    struct {
+      double width;
+      double height;
+    } camera;
   };
 } Object;
 
@@ -37,10 +49,11 @@ int M; // height of image in pixels
 int N; // width of image in pixels
 
 // Global variables to hold general scene data
-Object* objects[maxObjects]; // Global array to keep track of objects in the scene
-int numObjects; // index to keep track of number of objects in the scene
-double ch; // camera height
-double cw; // camera width
+Object* physicalObjects[maxObjects]; // Global array to keep track of objects in the scene
+int numPhysicalObjects; // index to keep track of number of objects in the scene
+Object* lightObjects[maxObjects];
+int numLightObjects;
+Object* cameraObject;
 
 // Miscellaneous Globals
 int line = 1; // keep track of the line number inside of the json file
