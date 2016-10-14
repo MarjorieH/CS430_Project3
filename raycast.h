@@ -73,6 +73,7 @@ void writeP3(FILE* fh);
 void printObjs();
 void printPixMap();
 unsigned char double_to_color(double color);
+void illuminate(double colorObjT, Object* colorObj, double* Rd, double* Ro, int pixIndex);
 
 // static inline functions
 static inline double sqr(double v) {

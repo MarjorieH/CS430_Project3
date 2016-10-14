@@ -36,7 +36,7 @@ double sphere_intersection(double* Ro, double* Rd, double* C, double r) {
 double plane_intersection(double* Ro, double* Rd, double* P, double* N) {
   double D = -(N[0] * P[0] + N[1] * P[1] + N[2] * P[2]); // distance from origin to plane
   double t = -(N[0] * Ro[0] + N[1] * Ro[1] + N[2] * Ro[2] + D) /
-              (N[0] * Rd[0] + N[1] * Rd[1] + N[2] * Rd[2]);
+  (N[0] * Rd[0] + N[1] * Rd[1] + N[2] * Rd[2]);
 
   if (t > 0) return t;
 
@@ -81,8 +81,8 @@ void raycast(char* filename) {
       double Rd[3] = {x_coord, y_coord, 1}; // position of pixel
       normalize(Rd); // normalize (P - Ro)
 
-      double closest_t = INFINITY;
-      Object* object;
+      double closestT = INFINITY;
+      Object* closestObject;
       for (int i = 0; i < numPhysicalObjects; i++) { // loop through the array of objects in the scene
         double t = 0;
         if (physicalObjects[i]->kind == 0) { // plane
@@ -95,17 +95,17 @@ void raycast(char* filename) {
           fprintf(stderr, "Unrecognized object.\n");
           exit(1);
         }
-        if (t > 0 && t < closest_t) { // found a closer t value, save the object data
-          closest_t = t;
-          object = malloc(sizeof(Object));
-          object = physicalObjects[i];
+        if (t > 0 && t < closestT) { // found a closer t value, save the object data
+          closestT = t;
+          closestObject = physicalObjects[i];
         }
       }
-      // place the pixel into the pixmap array
-      if (closest_t > 0 && closest_t != INFINITY) {
-        pixmap[pixIndex].R = double_to_color(object->diffuseColor[0]);
-        pixmap[pixIndex].G = double_to_color(object->diffuseColor[1]);
-        pixmap[pixIndex].B = double_to_color(object->diffuseColor[2]);
+      // place the pixel into the pixmap array, with illumination
+      if (closestT > 0 && closestT != INFINITY) {
+        illuminate(closestT, closestObject, Rd, Ro, pixIndex);
+        /*pixmap[pixIndex].R = double_to_color(color[0]);
+        pixmap[pixIndex].G = double_to_color(color[1]);
+        pixmap[pixIndex].B = double_to_color(color[2]);*/
         //free(object); // deallocate mem for object
       }
       else { // make background pixels black
@@ -117,11 +117,89 @@ void raycast(char* filename) {
     }
   }
   // finished created image data, write out
-  //FILE* fh = fopen(filename, "w");
-  //writeP3(fh);
-  printPixMap();
+  FILE* fh = fopen(filename, "w");
+  writeP3(fh);
   // free the pixmap from memory
   free(pixmap);
+}
+
+static inline void v3_scale(double* a, double s, double* c) {
+  c[0] = s * a[0];
+  c[1] = s * a[1];
+  c[2] = s * a[2];
+}
+
+static inline void v3_add(double* a, double* b, double* c) {
+  c[0] = a[0] + b[0];
+  c[1] = a[1] + b[1];
+  c[2] = a[2] + b[2];
+}
+
+static inline void v3_subtract(double* a, double* b, double* c) {
+  c[0] = a[0] - b[0];
+  c[1] = a[1] - b[1];
+  c[2] = a[2] - b[2];
+}
+
+static inline double p3_distance(double* a, double* b) {
+  return sqrt(sqr(b[0] - a[0]) + sqr(b[1] - a[1]) + sqr(b[2] - a[2]));
+}
+
+void illuminate(double colorObjT, Object* colorObj, double* Rd, double* Ro, int pixIndex) {
+  // initialize values for color, would be where ambient color goes
+  double color[3];
+  color[0] = 0;
+  color[1] = 0;
+  color[2] = 0;
+
+  double closestT = INFINITY;
+  Object* closestShadowObj;
+
+  // loop through all the lights in the lights array
+  for (int i = 0; i < numLightObjects; i++) {
+    double Ron[3]; // position of object
+    v3_scale(Rd, colorObjT, Ron);
+    v3_add(Ron, Ro, Ron);
+    double Rdn[3]; // position of light
+    v3_subtract(lightObjects[i]->position, Ron, Rdn);
+
+    for (int j = 0; j < numPhysicalObjects; j++) { // loop through all the objects in the array
+      double currentT = 0;
+      Object* currentObj = physicalObjects[j];
+
+      if (currentObj == colorObj) continue; // skip over the object we are coloring
+
+      if (currentObj->kind == 0) { // plane
+        currentT = plane_intersection(Ron, Rdn, currentObj->position, currentObj->plane.normal);
+      }
+      else if (currentObj->kind == 1) { // sphere
+        currentT = sphere_intersection(Ron, Rdn, currentObj->position, currentObj->sphere.radius);
+      }
+      else { // ???
+        fprintf(stderr, "Unrecognized object.\n");
+        exit(1);
+      }
+      //double distanceToLight = p3_distance(Ron, lightObjects[i]->position); // distance from object to the light
+      //currentT <= distanceToLight &&
+      if (currentT > 0 && currentT < closestT) { // found a closer t value, save the object data
+        closestT = currentT; // the current t value is the new closest t value
+        closestShadowObj = currentObj;
+      }
+    }
+  }
+  if (closestT == INFINITY) { // no shadow
+    color[0] = colorObj->specularColor[0];
+    color[1] = colorObj->specularColor[1];
+    color[2] = colorObj->specularColor[2];
+  }
+  else {
+    color[0] = colorObj->diffuseColor[0];
+    color[1] = colorObj->diffuseColor[1];
+    color[2] = colorObj->diffuseColor[2];
+  }
+  pixmap[pixIndex].R = double_to_color(color[0]);
+  pixmap[pixIndex].G = double_to_color(color[1]);
+  pixmap[pixIndex].B = double_to_color(color[2]);
 }
 
 
@@ -484,15 +562,15 @@ void read_scene(char* filename) {
 void printObjs() {
   for (int i = 0; i < numPhysicalObjects; i++) {
     printf("Object %i: type = %i; position = [%lf, %lf, %lf]\n", i, physicalObjects[i]->kind,
-                                                                    physicalObjects[i]->position[0],
-                                                                    physicalObjects[i]->position[1],
-                                                                    physicalObjects[i]->position[2]);
+    physicalObjects[i]->position[0],
+    physicalObjects[i]->position[1],
+    physicalObjects[i]->position[2]);
   }
   for (int i = 0; i < numLightObjects; i++) {
     printf("Light Object %i: type = %i; position = [%lf, %lf, %lf]\n", i, lightObjects[i]->kind,
-                                                                          lightObjects[i]->position[0],
-                                                                          lightObjects[i]->position[1],
-                                                                          lightObjects[i]->position[2]);
+    lightObjects[i]->position[0],
+    lightObjects[i]->position[1],
+    lightObjects[i]->position[2]);
   }
   printf("Camera: type = %i\n", cameraObject->kind);
 }
