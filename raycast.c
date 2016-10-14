@@ -43,6 +43,17 @@ double plane_intersection(double* Ro, double* Rd, double* P, double* N) {
   return -1; // no intersection
 }
 
+// helper function to convert a percentage double into a valid value for a color channel
+unsigned char double_to_color(double color) {
+  if (color > 1.0) {
+    color = 1.0;
+  }
+  else if (color < 0) {
+    color = 0.0;
+  }
+  return (unsigned char)(maxColor * color);
+}
+
 // Cast the objects in the scene and write the output image to the file
 void raycast(char* filename) {
 
@@ -92,10 +103,10 @@ void raycast(char* filename) {
       }
       // place the pixel into the pixmap array
       if (closest_t > 0 && closest_t != INFINITY) {
-        pixmap[pixIndex].R = (unsigned char)(object->color[0] * maxColor);
-        pixmap[pixIndex].G = (unsigned char)(object->color[1] * maxColor);
-        pixmap[pixIndex].B = (unsigned char)(object->color[2] * maxColor);
-        free(object); // deallocate mem for object
+        pixmap[pixIndex].R = double_to_color(object->diffuseColor[0]);
+        pixmap[pixIndex].G = double_to_color(object->diffuseColor[1]);
+        pixmap[pixIndex].B = double_to_color(object->diffuseColor[2]);
+        //free(object); // deallocate mem for object
       }
       else { // make background pixels black
         pixmap[pixIndex].R = 0;
@@ -108,10 +119,11 @@ void raycast(char* filename) {
   // finished created image data, write out
   //FILE* fh = fopen(filename, "w");
   //writeP3(fh);
-  //printPixMap();
+  printPixMap();
   // free the pixmap from memory
   free(pixmap);
 }
+
 
 // next_c() wraps the getc() function and provides error checking and line
 // number maintenance
@@ -220,7 +232,8 @@ void read_scene(char* filename) {
   // initialize counters
   numPhysicalObjects = 0;
   numLightObjects = 0;
-  Object* object;
+
+  Object* object; // temp object variable
 
   skip_ws(json);
   expect_c(json, '['); // Find the beginning of the list
@@ -432,7 +445,6 @@ void read_scene(char* filename) {
         exit(1);
       }
 
-      printf("Kind after: %i\n", kind);
       // place object into the appropriate data structure
       if (kind == 0 || kind == 1) {
         physicalObjects[numPhysicalObjects] = object;
@@ -469,7 +481,7 @@ void read_scene(char* filename) {
 }
 
 // function to print out all the objects to stdout, for debugging
-void printObjs () {
+void printObjs() {
   for (int i = 0; i < numPhysicalObjects; i++) {
     printf("Object %i: type = %i; position = [%lf, %lf, %lf]\n", i, physicalObjects[i]->kind,
                                                                     physicalObjects[i]->position[0],
@@ -486,7 +498,7 @@ void printObjs () {
 }
 
 // function to print out the contents of pixmap to stdout, for debugging
-void printPixMap () {
+void printPixMap() {
   int i = 0;
   for (int y = 0; y < M; y++) {
     for (int x = 0; x < N; x++) {

@@ -70,8 +70,9 @@ void read_scene(char* filename);
 void skip_ws(FILE* json);
 double sphere_intersection(double* Ro, double* Rd, double* C, double r);
 void writeP3(FILE* fh);
-void printObjs ();
-void printPixMap ();
+void printObjs();
+void printPixMap();
+unsigned char double_to_color(double color);
 
 // static inline functions
 static inline double sqr(double v) {
