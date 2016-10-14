@@ -3,3 +3,6 @@ all: raycast.c
 
 clean:
 	rm -rf raycast *~
+
+test:
+	./raycast 100 100 input.json output.ppm

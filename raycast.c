@@ -59,7 +59,7 @@ void raycast(char* filename) {
 
   // initialize pixmap based on the number of pixels
   pixmap = malloc(sizeof(RGBpixel) * numPixels);
-  int pixIndex = 0; // place in pixmap array
+  int pixIndex = 0; // position in pixmap array
 
   for (int y = 0; y < M; y++) { // for each row
     double y_coord = -(cy - (ch/2) + pixheight * (y + 0.5)); // y coord of the row
@@ -95,7 +95,7 @@ void raycast(char* filename) {
         pixmap[pixIndex].R = (unsigned char)(object->color[0] * maxColor);
         pixmap[pixIndex].G = (unsigned char)(object->color[1] * maxColor);
         pixmap[pixIndex].B = (unsigned char)(object->color[2] * maxColor);
-        free(object);
+        free(object); // deallocate mem for object
       }
       else { // make background pixels black
         pixmap[pixIndex].R = 0;
@@ -106,13 +106,10 @@ void raycast(char* filename) {
     }
   }
   // finished created image data, write out
-  FILE* fh = fopen(filename, "w");
-  writeP3(fh);
-
+  //FILE* fh = fopen(filename, "w");
+  //writeP3(fh);
+  //printPixMap();
   // free the pixmap from memory
-  for (int i = 0; i < numPixels; i++) {
-    free(pixmap[numPixels]);
-  }
   free(pixmap);
 }
 
@@ -223,6 +220,7 @@ void read_scene(char* filename) {
   // initialize counters
   numPhysicalObjects = 0;
   numLightObjects = 0;
+  Object* object;
 
   skip_ws(json);
   expect_c(json, '['); // Find the beginning of the list
@@ -234,11 +232,11 @@ void read_scene(char* filename) {
     if (c == ']') {
       fprintf(stderr, "Error: Empty object at line %d.\n", line);
       fclose(json);
+      free(object);
       return;
     }
     if (c == '{') {
-      Object* object;
-      object = malloc(sizeof(Object));
+      object = malloc(sizeof(Object)); // assign memory to hold the new object
       skip_ws(json);
       // Parse the object
       char* key = next_string(json);
@@ -275,6 +273,7 @@ void read_scene(char* filename) {
       skip_ws(json);
       int kind = object->kind; // check what kind of object we are parsing
       while (1) { // parse the current object
+
         c = next_c(json);
         if (c == '}') {
           break; // stop parsing this object
@@ -433,12 +432,13 @@ void read_scene(char* filename) {
         exit(1);
       }
 
+      printf("Kind after: %i\n", kind);
       // place object into the appropriate data structure
       if (kind == 0 || kind == 1) {
         physicalObjects[numPhysicalObjects] = object;
         numPhysicalObjects++;
       }
-      else if (kind == 3) {
+      else if (kind == 2) {
         lightObjects[numLightObjects] = object;
         numLightObjects++;
       }
@@ -449,7 +449,6 @@ void read_scene(char* filename) {
         object->position[2] = 0;
         cameraObject = object;
       }
-      free(object);
 
       skip_ws(json);
       c = next_c(json);
@@ -458,6 +457,7 @@ void read_scene(char* filename) {
       }
       else if (c == ']') {
         fclose(json);
+        free(object);
         return;
       }
       else {
@@ -466,6 +466,35 @@ void read_scene(char* filename) {
       }
     }
   } // end loop through all objects in scene
+}
+
+// function to print out all the objects to stdout, for debugging
+void printObjs () {
+  for (int i = 0; i < numPhysicalObjects; i++) {
+    printf("Object %i: type = %i; position = [%lf, %lf, %lf]\n", i, physicalObjects[i]->kind,
+                                                                    physicalObjects[i]->position[0],
+                                                                    physicalObjects[i]->position[1],
+                                                                    physicalObjects[i]->position[2]);
+  }
+  for (int i = 0; i < numLightObjects; i++) {
+    printf("Light Object %i: type = %i; position = [%lf, %lf, %lf]\n", i, lightObjects[i]->kind,
+                                                                          lightObjects[i]->position[0],
+                                                                          lightObjects[i]->position[1],
+                                                                          lightObjects[i]->position[2]);
+  }
+  printf("Camera: type = %i\n", cameraObject->kind);
+}
+
+// function to print out the contents of pixmap to stdout, for debugging
+void printPixMap () {
+  int i = 0;
+  for (int y = 0; y < M; y++) {
+    for (int x = 0; x < N; x++) {
+      printf("[%i, %i, %i] ", pixmap[i].R, pixmap[i].G, pixmap[i].B); // print the pixel
+      i++;
+    }
+    printf("\n");
+  }
 }
 
 int main(int args, char** argv) {
