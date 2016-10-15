@@ -85,3 +85,21 @@ static inline void normalize(double* v) {
   v[1] /= len;
   v[2] /= len;
 }
+static inline void v3_scale(double* a, double s, double* c) {
+  c[0] = s * a[0];
+  c[1] = s * a[1];
+  c[2] = s * a[2];
+}
+static inline void v3_add(double* a, double* b, double* c) {
+  c[0] = a[0] + b[0];
+  c[1] = a[1] + b[1];
+  c[2] = a[2] + b[2];
+}
+static inline void v3_subtract(double* a, double* b, double* c) {
+  c[0] = a[0] - b[0];
+  c[1] = a[1] - b[1];
+  c[2] = a[2] - b[2];
+}
+static inline double p3_distance(double* a, double* b) {
+  return sqrt(sqr(b[0] - a[0]) + sqr(b[1] - a[1]) + sqr(b[2] - a[2]));
+}

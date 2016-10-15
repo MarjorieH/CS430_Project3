@@ -123,48 +123,38 @@ void raycast(char* filename) {
   free(pixmap);
 }
 
-static inline void v3_scale(double* a, double s, double* c) {
-  c[0] = s * a[0];
-  c[1] = s * a[1];
-  c[2] = s * a[2];
-}
-
-static inline void v3_add(double* a, double* b, double* c) {
-  c[0] = a[0] + b[0];
-  c[1] = a[1] + b[1];
-  c[2] = a[2] + b[2];
-}
-
-static inline void v3_subtract(double* a, double* b, double* c) {
-  c[0] = a[0] - b[0];
-  c[1] = a[1] - b[1];
-  c[2] = a[2] - b[2];
-}
-
-static inline double p3_distance(double* a, double* b) {
-  return sqrt(sqr(b[0] - a[0]) + sqr(b[1] - a[1]) + sqr(b[2] - a[2]));
-}
-
 void illuminate(double colorObjT, Object* colorObj, double* Rd, double* Ro, int pixIndex) {
+
   // initialize values for color, would be where ambient color goes
   double color[3];
-  color[0] = 0;
-  color[1] = 0;
-  color[2] = 0;
+  color[0] = 0.2;
+  color[1] = 0.2;
+  color[2] = 0.2;
+
+  int kind = colorObj->kind;
 
   double closestT = INFINITY;
   Object* closestShadowObj;
 
   // loop through all the lights in the lights array
   for (int i = 0; i < numLightObjects; i++) {
-    double Ron[3]; // position of object
-    v3_scale(Rd, colorObjT, Ron);
-    v3_add(Ron, Ro, Ron);
-    double Rdn[3]; // direction from object to light
-    v3_subtract(lightObjects[i]->position, Ron, Rdn);
-    normalize(Rdn);
+    Object* light = lightObjects[i];
 
-    //printf("Ron: [%lf, %lf, %lf]; Rdn: [%lf, %lf, %lf]\n", Ron[0], Ron[1], Ron[2], Rdn[0], Rdn[1], Rd[2]);
+    double lightOrigin[3] = {light->position[0], light->position[1], light->position[2]}; // position of the light
+    double lightDirection[3];
+    v3_scale(Rd, colorObjT, lightDirection);
+    v3_add(lightDirection, Ro, lightDirection);
+    v3_subtract(lightDirection, lightOrigin, lightDirection);
+    normalize(lightDirection);
+
+    double checkBack;
+    //printf("lightOrigin: [%lf, %lf, %lf]; lightDirection: [%lf, %lf, %lf]\n", lightOrigin[0], lightOrigin[1], lightOrigin[2], lightDirection[0], lightDirection[1], Rd[2]);
+    if (kind == 0) {
+      checkBack = plane_intersection(lightOrigin, lightDirection, colorObj->position, colorObj->plane.normal);
+    }
+    else {
+      checkBack = sphere_intersection(lightOrigin, lightDirection, colorObj->position, colorObj->sphere.radius);
+    }
 
     for (int j = 0; j < numPhysicalObjects; j++) { // loop through all the objects in the array
       double currentT = 0;
@@ -173,32 +163,42 @@ void illuminate(double colorObjT, Object* colorObj, double* Rd, double* Ro, int 
       if (currentObj == colorObj) continue; // skip over the object we are coloring
 
       if (currentObj->kind == 0) { // plane
-        currentT = plane_intersection(Ron, Rdn, currentObj->position, currentObj->plane.normal);
+        currentT = plane_intersection(lightOrigin, lightDirection, currentObj->position, currentObj->plane.normal);
       }
       else if (currentObj->kind == 1) { // sphere
-        currentT = sphere_intersection(Ron, Rdn, currentObj->position, currentObj->sphere.radius);
+        currentT = sphere_intersection(lightOrigin, lightDirection, currentObj->position, currentObj->sphere.radius);
       }
       else { // ???
         fprintf(stderr, "Unrecognized object.\n");
         exit(1);
       }
-      double distanceToLight = p3_distance(Ron, lightObjects[i]->position); // distance from object to the light
-      if (currentT >= distanceToLight) {
-      }
-      if (currentT <= distanceToLight && currentT > 0 && currentT < closestT) { // found a closer t value, save the object data
+      //double distanceToLight = p3_distance(lightOrigin, lightObjects[i]->position); // distance from object to the light
+
+      if (currentT > 0 &&
+          currentT < closestT) { // found a closer t value, save the object data
         closestT = currentT; // the current t value is the new closest t value
         closestShadowObj = currentObj;
       }
     }
+
     if (closestT == INFINITY) { // no shadow
-      color[0] = colorObj->specularColor[0];
-      color[1] = colorObj->specularColor[1];
-      color[2] = colorObj->specularColor[2];
-    }
-    else {
-      color[0] = colorObj->diffuseColor[0];
-      color[1] = colorObj->diffuseColor[1];
-      color[2] = colorObj->diffuseColor[2];
+      double* N;
+      if (kind == 0) {
+        N = colorObj->plane.normal;
+      }
+      else {
+        v3_subtract(lightOrigin, colorObj->position, N);
+      }
+      double diffuse[3] = {light->color[0] * colorObj->diffuseColor[0],
+                         light->color[1] * colorObj->diffuseColor[1],
+                         light->color[2] * colorObj->diffuseColor[2]};
+      double specular[3] = {light->color[0] * colorObj->specularColor[0],
+                          light->color[1] * colorObj->specularColor[1],
+                          light->color[2] * colorObj->specularColor[2]};
+
+      color[0] += diffuse[0] + specular[0];
+      color[1] += diffuse[1] + specular[1];
+      color[2] += diffuse[2] + specular[2];
     }
   }
 
