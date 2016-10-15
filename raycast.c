@@ -160,8 +160,11 @@ void illuminate(double colorObjT, Object* colorObj, double* Rd, double* Ro, int 
     double Ron[3]; // position of object
     v3_scale(Rd, colorObjT, Ron);
     v3_add(Ron, Ro, Ron);
-    double Rdn[3]; // position of light
+    double Rdn[3]; // direction from object to light
     v3_subtract(lightObjects[i]->position, Ron, Rdn);
+    normalize(Rdn);
+
+    //printf("Ron: [%lf, %lf, %lf]; Rdn: [%lf, %lf, %lf]\n", Ron[0], Ron[1], Ron[2], Rdn[0], Rdn[1], Rd[2]);
 
     for (int j = 0; j < numPhysicalObjects; j++) { // loop through all the objects in the array
       double currentT = 0;
@@ -179,24 +182,26 @@ void illuminate(double colorObjT, Object* colorObj, double* Rd, double* Ro, int 
         fprintf(stderr, "Unrecognized object.\n");
         exit(1);
       }
-      //double distanceToLight = p3_distance(Ron, lightObjects[i]->position); // distance from object to the light
-      //currentT <= distanceToLight &&
-      if (currentT > 0 && currentT < closestT) { // found a closer t value, save the object data
+      double distanceToLight = p3_distance(Ron, lightObjects[i]->position); // distance from object to the light
+      if (currentT >= distanceToLight) {
+      }
+      if (currentT <= distanceToLight && currentT > 0 && currentT < closestT) { // found a closer t value, save the object data
         closestT = currentT; // the current t value is the new closest t value
         closestShadowObj = currentObj;
       }
     }
+    if (closestT == INFINITY) { // no shadow
+      color[0] = colorObj->specularColor[0];
+      color[1] = colorObj->specularColor[1];
+      color[2] = colorObj->specularColor[2];
+    }
+    else {
+      color[0] = colorObj->diffuseColor[0];
+      color[1] = colorObj->diffuseColor[1];
+      color[2] = colorObj->diffuseColor[2];
+    }
   }
-  if (closestT == INFINITY) { // no shadow
-    color[0] = colorObj->specularColor[0];
-    color[1] = colorObj->specularColor[1];
-    color[2] = colorObj->specularColor[2];
-  }
-  else {
-    color[0] = colorObj->diffuseColor[0];
-    color[1] = colorObj->diffuseColor[1];
-    color[2] = colorObj->diffuseColor[2];
-  }
+
   pixmap[pixIndex].R = double_to_color(color[0]);
   pixmap[pixIndex].G = double_to_color(color[1]);
   pixmap[pixIndex].B = double_to_color(color[2]);
