@@ -43,17 +43,17 @@ typedef struct {
 } Object;
 
 // Global variables to hold image data
-RGBpixel *pixmap; // array of pixels to hold the image data
+RGBpixel* pixmap; // array of pixels to hold the image data
 int numPixels; // total number of pixels in image (N * M)
 int M; // height of image in pixels
 int N; // width of image in pixels
 
 // Global variables to hold general scene data
-Object* physicalObjects[maxObjects]; // Global array to keep track of objects in the scene
+Object* physicalObjects; // Global array to keep track of objects in the scene
 int numPhysicalObjects; // index to keep track of number of objects in the scene
-Object* lightObjects[maxObjects];
+Object* lightObjects;
 int numLightObjects;
-Object* cameraObject;
+Object cameraObject;
 
 // Miscellaneous Globals
 int line = 1; // keep track of the line number inside of the json file
@@ -63,9 +63,9 @@ void expect_c(FILE* json, int d);
 int next_c(FILE* json);
 double next_number(FILE* json);
 char* next_string(FILE* json);
-double* next_vector(FILE* json);
+void next_vector(FILE* json, double* v);
 double plane_intersection(double* Ro, double* Rd, double* P, double* N);
-void raycast(char* filename);
+void raycast();
 void read_scene(char* filename);
 void skip_ws(FILE* json);
 double sphere_intersection(double* Ro, double* Rd, double* C, double r);
@@ -73,7 +73,9 @@ void writeP3(FILE* fh);
 void printObjs();
 void printPixMap();
 unsigned char double_to_color(double color);
-void illuminate(double colorObjT, Object* colorObj, double* Rd, double* Ro, int pixIndex);
+void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int pixIndex);
+double frad(double lightDistance, double a0, double a1, double a2);
+void clean_up();
 
 // static inline functions
 static inline double sqr(double v) {
