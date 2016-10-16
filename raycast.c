@@ -118,9 +118,9 @@ void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int p
 
   // initialize values for color, would be where ambient color goes
   double color[3];
-  color[0] = 0.2;
-  color[1] = 0.2;
-  color[2] = 0.2;
+  color[0] = Ka * ambience;
+  color[1] = Ka * ambience;
+  color[2] = Ka * ambience;
 
   int kind = colorObj.kind;
 
@@ -141,58 +141,26 @@ void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int p
     Object light = lightObjects[i];
 
     double lightOrigin[3] = {light.position[0], light.position[1], light.position[2]}; // position of the light
-    double lightDirection[3];
+    double lightDirection[3]; // ray from light towards the object
     v3_scale(Rd, colorObjT, lightDirection);
     v3_add(lightDirection, Ro, lightDirection);
     v3_subtract(lightDirection, lightOrigin, lightDirection);
     normalize(lightDirection);
 
+    //double objToLight[3]; // ray from object towards the light
+    //v3_subtract(lightOrigin, objOrigin, objToLight);
+    //normalize(objToLight);
+
     double lightDistance = p3_distance(lightOrigin, objOrigin); // distance from the light to the current pixel
-    //printf("lightDistance: %lf\n", lightDistance);
 
-    //printf("lightOrigin: [%lf, %lf, %lf]; lightDirection: [%lf, %lf, %lf]\n", lightOrigin[0], lightOrigin[1], lightOrigin[2], lightDirection[0], lightDirection[1], Rd[2]);
-
-    /* Check for shadows
-    double closestT = INFINITY;
-    Object closestShadowObj;
-
-    double checkBack;
-    if (kind == 0) {
-      checkBack = plane_intersection(lightOrigin, lightDirection, colorObj.position, colorObj.plane.normal);
-    }
-    else {
-      checkBack = sphere_intersection(lightOrigin, lightDirection, colorObj.position, colorObj.sphere.radius);
-    }
-
-    for (int j = 0; j < numPhysicalObjects; j++) { // loop through all the objects in the array
-      double currentT = 0;
-      Object currentObj = physicalObjects[j];
-
-      if (currentObj == colorObj) continue; // skip over the object we are coloring
-
-      if (currentObj.kind == 0) { // plane
-        currentT = plane_intersection(lightOrigin, lightDirection, currentObj.position, currentObj.plane.normal);
-      }
-      else if (currentObj.kind == 1) { // sphere
-        currentT = sphere_intersection(lightOrigin, lightDirection, currentObj.position, currentObj.sphere.radius);
-      }
-      else { // ???
-        fprintf(stderr, "Unrecognized object.\n");
-        exit(1);
-      }
-
-      if (currentT > 0 && currentT < closestT) { // found a closer t value, save the object data
-        closestT = currentT; // the current t value is the new closest t value
-        closestShadowObj = currentObj;
-      }
-    }*/
+    //TODO: Calculate Shadows
 
     //if (closestT == INFINITY) { // no shadow
 
       double diffuse[3];
-      diffuse[0] = light.color[0] * colorObj.diffuseColor[0];
-      diffuse[1] = light.color[1] * colorObj.diffuseColor[1];
-      diffuse[2] = light.color[2] * colorObj.diffuseColor[2];
+      diffuse[0] = diffuse_reflection(light.color[0], colorObj.diffuseColor[0], N, lightDirection);
+      diffuse[1] = diffuse_reflection(light.color[1], colorObj.diffuseColor[1], N, lightDirection);
+      diffuse[2] = diffuse_reflection(light.color[2], colorObj.diffuseColor[2], N, lightDirection);
 
       double specular[3];
       specular[0] = light.color[0] * colorObj.specularColor[0];
@@ -210,6 +178,16 @@ void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int p
   pixmap[pixIndex].R = double_to_color(color[0]);
   pixmap[pixIndex].G = double_to_color(color[1]);
   pixmap[pixIndex].B = double_to_color(color[2]);
+}
+
+double diffuse_reflection(double lightColor, double diffuseColor, double* N, double* L) {
+  double result = v3_dot(N, L);
+  if (result > 0) {
+    return Ka * lightColor * diffuseColor * result;
+  }
+  else {
+    return 0.0;
+  }
 }
 
 // helper function to calculate radial attinuation

@@ -9,6 +9,12 @@
 #define format '3' // format of output image data
 #define maxObjects 128
 
+#define Ka 0 // ambient lighting
+#define Kd 1 // diffuse lighting
+#define Ks 0 // specular lighting
+
+#define ambience 0.2 // ambient lighting color
+
 // Structure to hold RGB pixel data
 typedef struct RGBpixel {
   unsigned char R, G, B;
@@ -76,6 +82,7 @@ unsigned char double_to_color(double color);
 void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int pixIndex);
 double frad(double lightDistance, double a0, double a1, double a2);
 void clean_up();
+double diffuse_reflection(double lightColor, double diffuseColor, double* N, double* L);
 
 // static inline functions
 static inline double sqr(double v) {
@@ -104,4 +111,7 @@ static inline void v3_subtract(double* a, double* b, double* c) {
 }
 static inline double p3_distance(double* a, double* b) {
   return sqrt(sqr(b[0] - a[0]) + sqr(b[1] - a[1]) + sqr(b[2] - a[2]));
+}
+static inline double v3_dot(double* a, double* b) {
+  return (a[0] * b[0]) + (a[1] * b[1]) + (a[2] * b[2]);
 }
