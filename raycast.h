@@ -8,6 +8,7 @@
 #define maxColor 255
 #define format '3' // format of output image data
 #define maxObjects 128
+#define epsilon 0.0000001 // tolerated error for comparing doubles
 
 #define ambientIntensity 1 // ambient lighting
 #define diffuseIntensity 1 // diffuse lighting
@@ -85,6 +86,7 @@ double frad(double lightDistance, double a0, double a1, double a2);
 void clean_up();
 double diffuse_reflection(double lightColor, double diffuseColor, double diffuseFactor);
 double specular_reflection(double lightColor, double specularColor, double diffuseFactor, double specularFactor);
+int obj_compare(Object a, Object b);
 
 // static inline functions
 static inline double sqr(double v) {
