@@ -9,11 +9,12 @@
 #define format '3' // format of output image data
 #define maxObjects 128
 
-#define Ka 0 // ambient lighting
-#define Kd 1 // diffuse lighting
-#define Ks 0 // specular lighting
+#define ambientIntensity 1 // ambient lighting
+#define diffuseIntensity 1 // diffuse lighting
+#define specularIntensity 1 // specular lighting
 
-#define ambience 0.2 // ambient lighting color
+#define ambience 0.02 // ambient lighting color
+#define specularPower 50 // degree of specular reflection
 
 // Structure to hold RGB pixel data
 typedef struct RGBpixel {
@@ -55,9 +56,9 @@ int M; // height of image in pixels
 int N; // width of image in pixels
 
 // Global variables to hold general scene data
-Object* physicalObjects; // Global array to keep track of objects in the scene
+Object physicalObjects[maxObjects]; // Global array to keep track of objects in the scene
 int numPhysicalObjects; // index to keep track of number of objects in the scene
-Object* lightObjects;
+Object lightObjects[maxObjects];
 int numLightObjects;
 Object cameraObject;
 
@@ -82,7 +83,8 @@ unsigned char double_to_color(double color);
 void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int pixIndex);
 double frad(double lightDistance, double a0, double a1, double a2);
 void clean_up();
-double diffuse_reflection(double lightColor, double diffuseColor, double* N, double* L);
+double diffuse_reflection(double lightColor, double diffuseColor, double diffuseFactor);
+double specular_reflection(double lightColor, double specularColor, double diffuseFactor, double specularFactor);
 
 // static inline functions
 static inline double sqr(double v) {
