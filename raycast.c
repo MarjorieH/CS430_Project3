@@ -167,33 +167,36 @@ void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int p
 
     double lightDistance = p3_distance(lightObjects[i].position, objOrigin); // distance from the light to the current pixel
 
-    /*
-    double closestT = INFINITY;
-    Object closestShadowObj;
-
+    int shadow = 0;
+    double currentT = 0.0;
     for (int j = 0; j < numPhysicalObjects; j++) { // loop through all the objects in the array
-      double currentT = 0;
       Object currentObj = physicalObjects[j];
 
-      if (obj_compare(currentObj, colorObj)) continue; // skip over the object we are coloring
+      if (obj_compare(currentObj, colorObj)) {
+        continue; // skip over the object we are coloring
+      }
+
+      double* newObjOrigin = malloc(3 * sizeof(double));
+      v3_scale(objToLight, 00.0000001, newObjOrigin);
+      v3_add(newObjOrigin, objOrigin, newObjOrigin);
 
       if (currentObj.kind == 0) { // plane
-        currentT = plane_intersection(objOrigin, objToLight, currentObj.position, currentObj.plane.normal);
+        currentT = plane_intersection(newObjOrigin, objToLight, currentObj.position, currentObj.plane.normal);
       }
       else if (currentObj.kind == 1) { // sphere
-        currentT = sphere_intersection(objOrigin, objToLight, currentObj.position, currentObj.sphere.radius);
+        currentT = sphere_intersection(newObjOrigin, objToLight, currentObj.position, currentObj.sphere.radius);
       }
       else { // ???
         fprintf(stderr, "Unrecognized object.\n");
         exit(1);
       }
 
-      if (currentT <= lightDistance && currentT > 0 && currentT < closestT) { // found a closer t value, save the object data
-        closestT = currentT; // the current t value is the new closest t value
-        closestShadowObj = currentObj;
+      if (currentT <= lightDistance && currentT > 0 && currentT < INFINITY) {
+        shadow = 1;
+        break;
       }
     }
-    if (closestT == INFINITY) { // */ // no shadow
+    if (shadow == 0) { // */ // no shadow
 
       double diffuse[3];
       diffuse[0] = diffuse_reflection(lightObjects[i].color[0], colorObj.diffuseColor[0], diffuseFactor);
@@ -211,7 +214,7 @@ void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int p
       color[0] += fRad * fAng * (diffuse[0] + specular[0]);
       color[1] += fRad * fAng * (diffuse[1] + specular[1]);
       color[2] += fRad * fAng * (diffuse[2] + specular[2]);
-    //}
+    }
   }
   pixmap[pixIndex].R = double_to_color(color[0]);
   pixmap[pixIndex].G = double_to_color(color[1]);
