@@ -15,7 +15,7 @@
 #define specularIntensity 1 // specular lighting
 
 #define ambience 0.02 // ambient lighting color
-#define specularPower 50 // degree of specular reflection
+#define specularPower 1 // degree of specular reflection
 
 // Structure to hold RGB pixel data
 typedef struct RGBpixel {
@@ -87,16 +87,23 @@ void clean_up();
 double diffuse_reflection(double lightColor, double diffuseColor, double diffuseFactor);
 double specular_reflection(double lightColor, double specularColor, double diffuseFactor, double specularFactor);
 int obj_compare(Object a, Object b);
+double fang(double angularA0, double* lightToObj, double* lightDirection);
 
 // static inline functions
+// returns 1 if values are equal, 0 if not
+static inline int equal(double a, double b) {
+  return fabs(a - b) < epsilon;
+}
 static inline double sqr(double v) {
   return v*v;
 }
 static inline void normalize(double* v) {
   double len = sqrt(sqr(v[0]) + sqr(v[1]) + sqr(v[2]));
-  v[0] /= len;
-  v[1] /= len;
-  v[2] /= len;
+  if (!equal(len, 0.0)) {
+    v[0] /= len;
+    v[1] /= len;
+    v[2] /= len;
+  }
 }
 static inline void v3_scale(double* a, double s, double* c) {
   c[0] = s * a[0];

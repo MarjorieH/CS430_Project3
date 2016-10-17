@@ -153,6 +153,9 @@ void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int p
     v3_subtract(lightObjects[i].position, objOrigin, objToLight);
     normalize(objToLight);
 
+    double* lightDirection = lightObjects[i].light.direction;
+    normalize(lightDirection);
+
     // reflection of the ray of light hitting the surface, symmetrical across the normal
     double* reflection = malloc(3 * sizeof(double)); // R =  lightToObj - 2 * N * (N dot lightToObj)
     v3_scale(surfaceNormal, 2  * v3_dot(surfaceNormal, lightToObj), reflection);
@@ -164,58 +167,50 @@ void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int p
 
     double lightDistance = p3_distance(lightObjects[i].position, objOrigin); // distance from the light to the current pixel
 
-    /*double checkBack;
-    if (kind == 0) {
-      checkBack = plane_intersection(objOrigin, objToLight, colorObj.position, colorObj.plane.normal);
+    /*
+    double closestT = INFINITY;
+    Object closestShadowObj;
+
+    for (int j = 0; j < numPhysicalObjects; j++) { // loop through all the objects in the array
+      double currentT = 0;
+      Object currentObj = physicalObjects[j];
+
+      if (obj_compare(currentObj, colorObj)) continue; // skip over the object we are coloring
+
+      if (currentObj.kind == 0) { // plane
+        currentT = plane_intersection(objOrigin, objToLight, currentObj.position, currentObj.plane.normal);
+      }
+      else if (currentObj.kind == 1) { // sphere
+        currentT = sphere_intersection(objOrigin, objToLight, currentObj.position, currentObj.sphere.radius);
+      }
+      else { // ???
+        fprintf(stderr, "Unrecognized object.\n");
+        exit(1);
+      }
+
+      if (currentT <= lightDistance && currentT > 0 && currentT < closestT) { // found a closer t value, save the object data
+        closestT = currentT; // the current t value is the new closest t value
+        closestShadowObj = currentObj;
+      }
     }
-    else {
-      checkBack = sphere_intersection(objOrigin, objToLight, colorObj.position, colorObj.sphere.radius);
-    }*/
+    if (closestT == INFINITY) { // */ // no shadow
 
-    //if (checkBack < 0) {
-      double closestT = INFINITY;
-      Object closestShadowObj;
+      double diffuse[3];
+      diffuse[0] = diffuse_reflection(lightObjects[i].color[0], colorObj.diffuseColor[0], diffuseFactor);
+      diffuse[1] = diffuse_reflection(lightObjects[i].color[1], colorObj.diffuseColor[1], diffuseFactor);
+      diffuse[2] = diffuse_reflection(lightObjects[i].color[2], colorObj.diffuseColor[2], diffuseFactor);
 
-      for (int j = 0; j < numPhysicalObjects; j++) { // loop through all the objects in the array
-        double currentT = 0;
-        Object currentObj = physicalObjects[j];
+      double specular[3];
+      specular[0] = specular_reflection(lightObjects[i].color[0], colorObj.specularColor[0], diffuseFactor, specularFactor);
+      specular[1] = specular_reflection(lightObjects[i].color[1], colorObj.specularColor[1], diffuseFactor, specularFactor);
+      specular[2] = specular_reflection(lightObjects[i].color[2], colorObj.specularColor[2], diffuseFactor, specularFactor);
 
-        if (obj_compare(currentObj, colorObj)) continue; // skip over the object we are coloring
+      double fRad = frad(lightDistance, lightObjects[i].light.radialA0, lightObjects[i].light.radialA1, lightObjects[i].light.radialA2);
+      double fAng = fang(lightObjects[i].light.angularA0, lightToObj, lightDirection);
 
-        if (currentObj.kind == 0) { // plane
-          currentT = plane_intersection(objOrigin, objToLight, currentObj.position, currentObj.plane.normal);
-        }
-        else if (currentObj.kind == 1) { // sphere
-          currentT = sphere_intersection(objOrigin, objToLight, currentObj.position, currentObj.sphere.radius);
-        }
-        else { // ???
-          fprintf(stderr, "Unrecognized object.\n");
-          exit(1);
-        }
-
-        if (currentT <= lightDistance && currentT > 0 && currentT < closestT) { // found a closer t value, save the object data
-          closestT = currentT; // the current t value is the new closest t value
-          closestShadowObj = currentObj;
-        }
-      }
-      if (closestT == INFINITY) { // no shadow
-
-        double diffuse[3];
-        diffuse[0] = diffuse_reflection(lightObjects[i].color[0], colorObj.diffuseColor[0], diffuseFactor);
-        diffuse[1] = diffuse_reflection(lightObjects[i].color[1], colorObj.diffuseColor[1], diffuseFactor);
-        diffuse[2] = diffuse_reflection(lightObjects[i].color[2], colorObj.diffuseColor[2], diffuseFactor);
-
-        double specular[3];
-        specular[0] = specular_reflection(lightObjects[i].color[0], colorObj.specularColor[0], diffuseFactor, specularFactor);
-        specular[1] = specular_reflection(lightObjects[i].color[1], colorObj.specularColor[1], diffuseFactor, specularFactor);
-        specular[2] = specular_reflection(lightObjects[i].color[2], colorObj.specularColor[2], diffuseFactor, specularFactor);
-
-        double fRad = frad(lightDistance, lightObjects[i].light.radialA0, lightObjects[i].light.radialA1, lightObjects[i].light.radialA2);
-
-        color[0] += fRad * (diffuse[0] + specular[0]);
-        color[1] += fRad * (diffuse[1] + specular[1]);
-        color[2] += fRad * (diffuse[2] + specular[2]);
-      }
+      color[0] += fRad * fAng * (diffuse[0] + specular[0]);
+      color[1] += fRad * fAng * (diffuse[1] + specular[1]);
+      color[2] += fRad * fAng * (diffuse[2] + specular[2]);
     //}
   }
   pixmap[pixIndex].R = double_to_color(color[0]);
@@ -223,36 +218,32 @@ void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int p
   pixmap[pixIndex].B = double_to_color(color[2]);
 }
 
-// returns 1 if values are equal, 0 if not
-int equal(double a, double b) {
-  return fabs(a - b) < epsilon;
-}
 
 // returns 1 if the physical objects are equal, 0 if not
 int obj_compare(Object a, Object b) {
   if (a.kind == b.kind &&
-      equal(a.diffuseColor[0], b.diffuseColor[0]) &&
-      equal(a.diffuseColor[1], b.diffuseColor[1]) &&
-      equal(a.diffuseColor[2], b.diffuseColor[2]) &&
-      equal(a.specularColor[0], b.specularColor[0]) &&
-      equal(a.specularColor[1], b.specularColor[1]) &&
-      equal(a.specularColor[2], b.specularColor[2]) &&
-      equal(a.position[0], b.position[0]) &&
-      equal(a.position[1], b.position[1]) &&
-      equal(a.position[2], b.position[2])) {
-    if (a.kind == 0 &&
+    equal(a.diffuseColor[0], b.diffuseColor[0]) &&
+    equal(a.diffuseColor[1], b.diffuseColor[1]) &&
+    equal(a.diffuseColor[2], b.diffuseColor[2]) &&
+    equal(a.specularColor[0], b.specularColor[0]) &&
+    equal(a.specularColor[1], b.specularColor[1]) &&
+    equal(a.specularColor[2], b.specularColor[2]) &&
+    equal(a.position[0], b.position[0]) &&
+    equal(a.position[1], b.position[1]) &&
+    equal(a.position[2], b.position[2])) {
+      if (a.kind == 0 &&
         equal(a.plane.normal[0], b.plane.normal[0]) &&
         equal(a.plane.normal[1], b.plane.normal[1]) &&
         equal(a.plane.normal[2], b.plane.normal[2])) {
-      return 1; // same plane object
-    }
-    else if (a.kind == 1 &&
-             equal(a.sphere.radius, b.sphere.radius)) {
+          return 1; // same plane object
+        }
+        else if (a.kind == 1 &&
+          equal(a.sphere.radius, b.sphere.radius)) {
       return 1; // same sphere object
     }
   }
   return 0;
-};
+}
 
 double diffuse_reflection(double lightColor, double diffuseColor, double diffuseFactor) {
   if (diffuseFactor > 0) {
@@ -274,11 +265,26 @@ double specular_reflection(double lightColor, double specularColor, double diffu
 
 // helper function to calculate radial attinuation
 double frad(double lightDistance, double a0, double a1, double a2) {
-  if (lightDistance == INFINITY) {
+  if (lightDistance == INFINITY ||
+      (equal(a0, 0.0) && equal(a1, 0.0) && equal(a2, 0.0))) {
     return 1.0;
   }
   else {
     return 1/(a2 * sqr(lightDistance) + (a1 * lightDistance) + a0);
+  }
+}
+
+double fang(double angularA0, double* lightToObj, double* lightDirection) { // vl = lightDirection v0 = lightToObj
+  if (equal(lightDirection[0], 0.0) &&
+      equal(lightDirection[0], 0.0) &&
+      equal(lightDirection[0], 0.0)) {
+    return 1.0;
+  }
+  // else if (...) {
+  //   return 0.0;
+  // }
+  else {
+    return pow(v3_dot(lightToObj, lightDirection), angularA0);
   }
 }
 
