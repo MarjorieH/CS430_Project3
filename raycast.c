@@ -710,7 +710,6 @@ int main(int args, char** argv) {
   //lightObjects = malloc(maxObjects * sizeof(Object));
 
   read_scene(argv[3]);
-  printObjs();
   raycast();
 
   // finished creating image data, write out

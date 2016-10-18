@@ -5,4 +5,4 @@ clean:
 	rm -rf raycast *~
 
 test:
-	./raycast 100 100 input.json output.ppm
+	./raycast 400 400 input.json output.ppm
