@@ -56,6 +56,7 @@ unsigned char double_to_color(double color) {
 
 // Cast the objects in the scene
 void raycast() {
+
   // default camera position
   double cx = cameraObject.position[0];
   double cy = cameraObject.position[1];
@@ -101,6 +102,7 @@ void raycast() {
       }
       // place the pixel into the pixmap array, with illumination
       if (closestT > 0 && closestT != INFINITY) {
+
         illuminate(closestT, closestObject, Rd, Ro, pixIndex);
       }
       else { // make background pixels black
@@ -116,8 +118,10 @@ void raycast() {
 
 void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int pixIndex) {
 
+
   // initialize values for color, would be where ambient color goes
   double color[3];
+
   color[0] = ambientIntensity * ambience;
   color[1] = ambientIntensity * ambience;
   color[2] = ambientIntensity * ambience;
@@ -128,11 +132,12 @@ void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int p
   v3_scale(Rd, colorObjT, objOrigin);
   v3_add(objOrigin, Ro, objOrigin);
 
+
   double* objToCam = malloc(3 * sizeof(double)); // vector from the object to the camera
   v3_subtract(cameraObject.position, objOrigin, objToCam);
   normalize(objToCam);
 
-  double* surfaceNormal; // surface normal of the object
+  double* surfaceNormal = malloc(3 * sizeof(double));; // surface normal of the object
   if (kind == 0) { // plane
     surfaceNormal = colorObj.plane.normal;
   }
@@ -143,6 +148,7 @@ void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int p
 
   // loop through all the lights in the lights array
   for (int i = 0; i < numLightObjects; i++) {
+
     double lightToObj[3]; // ray from light towards the object
     v3_scale(Rd, colorObjT, lightToObj);
     v3_add(lightToObj, Ro, lightToObj);
