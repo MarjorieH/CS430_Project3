@@ -102,11 +102,9 @@ void raycast() {
       }
       // place the pixel into the pixmap array, with illumination
       if (closestT > 0 && closestT != INFINITY) {
-
         illuminate(closestT, closestObject, Rd, Ro, pixIndex);
       }
       else { // make background pixels black
-
         pixmap[pixIndex].R = 0;
         pixmap[pixIndex].G = 0;
         pixmap[pixIndex].B = 0;
@@ -117,8 +115,6 @@ void raycast() {
 }
 
 void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int pixIndex) {
-
-
   // initialize values for color, would be where ambient color goes
   double color[3];
 
@@ -183,7 +179,7 @@ void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int p
       }
 
       double* newObjOrigin = malloc(3 * sizeof(double));
-      v3_scale(objToLight, 00.0000001, newObjOrigin);
+      v3_scale(objToLight, 0.0000001, newObjOrigin);
       v3_add(newObjOrigin, objOrigin, newObjOrigin);
 
       if (currentObj.kind == 0) { // plane
@@ -215,7 +211,7 @@ void illuminate(double colorObjT, Object colorObj, double* Rd, double* Ro, int p
       specular[2] = specular_reflection(lightObjects[i].color[2], colorObj.specularColor[2], diffuseFactor, specularFactor);
 
       double fRad = frad(lightDistance, lightObjects[i].light.radialA0, lightObjects[i].light.radialA1, lightObjects[i].light.radialA2);
-      double fAng = fang(lightObjects[i].light.angularA0, lightToObj, lightDirection);
+      double fAng = fang(lightObjects[i].light.angularA0, lightObjects[i].light.theta, lightToObj, lightDirection);
 
       color[0] += fRad * fAng * (diffuse[0] + specular[0]);
       color[1] += fRad * fAng * (diffuse[1] + specular[1]);
@@ -254,6 +250,7 @@ int obj_compare(Object a, Object b) {
   return 0;
 }
 
+// calculate diffuse reflection of the object
 double diffuse_reflection(double lightColor, double diffuseColor, double diffuseFactor) {
   if (diffuseFactor > 0) {
     return diffuseIntensity * lightColor * diffuseColor * diffuseFactor;
@@ -263,6 +260,7 @@ double diffuse_reflection(double lightColor, double diffuseColor, double diffuse
   }
 }
 
+// calculate specular reflection of the object
 double specular_reflection(double lightColor, double specularColor, double diffuseFactor, double specularFactor) {
   if (specularFactor > 0 && diffuseFactor > 0) {
     return specularIntensity * lightColor * specularColor * pow(specularFactor, specularPower);
@@ -283,15 +281,15 @@ double frad(double lightDistance, double a0, double a1, double a2) {
   }
 }
 
-double fang(double angularA0, double* lightToObj, double* lightDirection) { // vl = lightDirection v0 = lightToObj
-  if (equal(lightDirection[0], 0.0) &&
-      equal(lightDirection[0], 0.0) &&
-      equal(lightDirection[0], 0.0)) {
+// helper function to calculate angular attinuation
+double fang(double angularA0, double theta, double* lightToObj, double* lightDirection) { // vl = lightDirection v0 = lightToObj
+  double alpha = rad_to_deg(acos(v3_dot(lightToObj, lightDirection)));
+  if (equal(theta, 0.0)) { // not a spotlight
     return 1.0;
   }
-  // else if (...) {
-  //   return 0.0;
-  // }
+  else if (theta < alpha) { // point isn't within spotlight
+     return 0.0;
+  }
   else {
     return pow(v3_dot(lightToObj, lightDirection), angularA0);
   }
@@ -608,6 +606,16 @@ void read_scene(char* filename) {
             }
             else {
               fprintf(stderr, "Error: Unexpected 'angular-a0' attribute on line %d.\n", line);
+              exit(1);
+            }
+          }
+          else if (strcmp(key, "theta") == 0) {
+            double value = next_number(json);
+            if (kind == 2) {
+              lightObjects[numLightObjects].light.theta = value;
+            }
+            else {
+              fprintf(stderr, "Error: Unexpected 'theta' attribute on line %d.\n", line);
               exit(1);
             }
           }

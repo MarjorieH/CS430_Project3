@@ -15,7 +15,7 @@
 #define specularIntensity 1 // specular lighting
 
 #define ambience 0.1 // ambient lighting color
-#define specularPower 20 // degree of specular reflection
+#define specularPower 20 // degree of specular reflection, hard coded to 20
 
 // Structure to hold RGB pixel data
 typedef struct RGBpixel {
@@ -42,6 +42,7 @@ typedef struct {
       double radialA1;
       double radialA0;
       double angularA0;
+      double theta;
     } light;
     struct {
       double width;
@@ -87,7 +88,7 @@ void clean_up();
 double diffuse_reflection(double lightColor, double diffuseColor, double diffuseFactor);
 double specular_reflection(double lightColor, double specularColor, double diffuseFactor, double specularFactor);
 int obj_compare(Object a, Object b);
-double fang(double angularA0, double* lightToObj, double* lightDirection);
+double fang(double angularA0, double theta, double* lightToObj, double* lightDirection);
 
 // static inline functions
 // returns 1 if values are equal, 0 if not
@@ -125,4 +126,7 @@ static inline double p3_distance(double* a, double* b) {
 }
 static inline double v3_dot(double* a, double* b) {
   return (a[0] * b[0]) + (a[1] * b[1]) + (a[2] * b[2]);
+}
+static inline double rad_to_deg(double radians) {
+    return radians * (180.0 / M_PI);
 }
